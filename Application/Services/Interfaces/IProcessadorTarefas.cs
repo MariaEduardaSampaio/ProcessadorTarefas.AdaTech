@@ -8,7 +8,7 @@ namespace Application.Services.Interfaces
         Task IniciarTarefa(Tarefa tarefa);
         Task ImprimirTarefas();
         void ImprimirTarefa(Tarefa tarefa);
-        Task CancelarTarefasEmExecucao();
+        void CancelarTarefasEmExecucao();
         Task Encerrar();
         Task AgendarTarefas();
     }

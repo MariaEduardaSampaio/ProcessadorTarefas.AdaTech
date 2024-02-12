@@ -19,7 +19,7 @@ namespace Application.Services
             _repository = repository;
         }
 
-        public async Task CancelarTarefasEmExecucao()
+        public void CancelarTarefasEmExecucao()
         {
             var tarefasEmExecucao = _repository.GetByStatus(EstadoTarefa.EmExecucao);
 
@@ -28,7 +28,6 @@ namespace Application.Services
                 tarefa.Estado = EstadoTarefa.Cancelada;
                 _repository.Update(tarefa);
             }
-            return;
         }
 
         public async Task Encerrar()
@@ -45,32 +44,26 @@ namespace Application.Services
             return;
         }
 
-        public Task AgendarTarefas()
+        public async Task AgendarTarefas()
         {
             var tarefas = _repository.GetAll().ToList();
-            int quantidadeTarefasAgendadas = _repository.GetByStatus(EstadoTarefa.Agendada).Count();
+            int quantidadeTarefasAgendadas;
 
-            foreach (var tarefa in tarefas)
+            foreach (var tarefa in tarefas.Where(tarefa => tarefa.Estado.Equals(EstadoTarefa.Criada)).Take(_tarefasExecutadasEmParalelo))
             {
                 quantidadeTarefasAgendadas = _repository.GetByStatus(EstadoTarefa.Agendada).Count();
 
-                if ((tarefa.Estado.Equals(EstadoTarefa.Criada)
-                    && quantidadeTarefasAgendadas < _tarefasExecutadasEmParalelo)
-                    || tarefas.All(t => t.Estado.Equals(EstadoTarefa.Agendada)))
-                {
-                    tarefa.Estado = EstadoTarefa.Agendada;
-                    _repository.Update(tarefa);
-                    ImprimirTarefa(tarefa);
-                }
+                tarefa.Estado = EstadoTarefa.Agendada;
+                _repository.Update(tarefa);
             }
-            return Task.CompletedTask;
+            await Task.Delay(1000);
         }
 
         public async Task ProcessarTarefas()
         {
             while (true)
             {
-                AgendarTarefas();
+                await AgendarTarefas();
                 IEnumerable<Tarefa> tarefas = _repository.GetByStatus(EstadoTarefa.Agendada).Concat(_repository.GetByStatus(EstadoTarefa.EmPausa));
 
                 Queue<Tarefa> tarefasParaProcessar = new Queue<Tarefa>(tarefas);
@@ -83,7 +76,7 @@ namespace Application.Services
                 while (tasksEmExecucao.Count < _tarefasExecutadasEmParalelo && tarefasParaProcessar.Count > 0)
                 {
                     Tarefa tarefa = tarefasParaProcessar.Dequeue();
-                    tasksEmExecucao.Add(IniciarTarefa(tarefa)); 
+                    tasksEmExecucao.Add(IniciarTarefa(tarefa));
                 }
 
                 await Task.WhenAll(tasksEmExecucao);
@@ -96,7 +89,7 @@ namespace Application.Services
             int restantes = tamanhoBarra - completos;
 
             StringBuilder barra = new("[");
-            barra.Append('=', completos); 
+            barra.Append('=', completos);
             barra.Append(' ', restantes);
             barra.Append(']');
 
@@ -112,7 +105,7 @@ namespace Application.Services
 
             foreach (var tarefa in tarefas)
                 ImprimirTarefa(tarefa);
-            
+
             await Task.Delay(1000);
         }
 
@@ -209,7 +202,7 @@ namespace Application.Services
 
             _repository.Update(tarefa);
             //ImprimirTarefa(tarefa);
-            //await Task.Delay(200);
+            await Task.Delay(1000);
         }
     }
 }
