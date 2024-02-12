@@ -87,7 +87,6 @@ class Program
                 else
                     Console.WriteLine("Não existem tarefas inativas no momento.");
                 break;
-
             case 5:
                 Task processamento = processador!.ProcessarTarefas();
                 bool isProcessing = true;
@@ -103,11 +102,11 @@ class Program
                         switch (opcaoProcessamento)
                         {
                             case 1:
-                                await processador!.CancelarTarefasEmExecucao();
+                                processador.CancelarTarefasEmExecucao();
                                 break;
 
                             case 2:
-                                await processador!.Encerrar();
+                                await processador.Encerrar();
                                 Console.WriteLine("Tarefas pausadas!");
                                 isProcessing = false;
                                 break;
@@ -118,12 +117,11 @@ class Program
                         }
                     }
                     else if (processamento.IsCompleted)
-                    {
                         isProcessing = false;
-                    }
                     Console.Clear();
                 }
                 break;
+
 
             case 6:
                 Console.WriteLine("Saindo do programa...");
