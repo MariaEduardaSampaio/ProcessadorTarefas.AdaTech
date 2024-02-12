@@ -39,7 +39,6 @@ namespace Application.Services
             return Task.FromResult(tarefaCriada);
         }
 
-
         public async Task CancelarTarefaCriadaOuAgendada(int idTarefa)
         {
             var tarefa = _repository.GetById(idTarefa);

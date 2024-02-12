@@ -35,6 +35,14 @@ class Program
         return opcao;
     }
 
+    private static async Task ListarOpcoesProcessamentoTarefas()
+    {
+        Console.WriteLine("Menu:");
+        Console.WriteLine("1. Cancelar todas as tarefas em execução.");
+        Console.WriteLine("2. Encerrar execução de tarefas.");
+        Console.WriteLine("Escolha uma opção:");
+        await Task.Delay(1000);
+    }
     private static async Task RealizarOpcao(int opcao)
     {
         switch (opcao)
@@ -86,37 +94,22 @@ class Program
 
                 while (isProcessing)
                 {
-                    // Aguarda a conclusão de uma das tarefas: processamento ou entrada do usuário
-                    await Task.WhenAny(processamento, Task.Delay(80));
-
-                    Console.Clear();
-                    await processador.ImprimirTarefas();
-                    Console.WriteLine("Menu:");
-                    Console.WriteLine("1. Cancelar tarefas em execução.");
-                    Console.WriteLine("2. Encerrar execução de tarefas.");
-                    Console.WriteLine("Escolha uma opção:");
+                    await Task.WhenAny(processamento, processador.ImprimirTarefas(), ListarOpcoesProcessamentoTarefas());
 
                     if (Console.KeyAvailable)
                     {
-                        int opcaoProcessamento = int.Parse(Console.ReadLine());
+                        int opcaoProcessamento = ReceberOpcaoValida();
 
                         switch (opcaoProcessamento)
                         {
                             case 1:
-                                bool conversaoValida;
-                                int idTarefa;
-                                do
-                                {
-                                    Console.WriteLine("Entre com o ID da tarefa em execução que deseja cancelar:");
-                                    conversaoValida = int.TryParse(Console.ReadLine(), out idTarefa);
-                                } while (!conversaoValida);
-                                await processador!.CancelarTarefa(idTarefa);
+                                await processador!.CancelarTarefasEmExecucao();
                                 break;
 
                             case 2:
-                                Console.WriteLine("Tarefas pausadas!");
                                 await processador!.Encerrar();
-                                isProcessing = false; // Sai do loop
+                                Console.WriteLine("Tarefas pausadas!");
+                                isProcessing = false;
                                 break;
 
                             default:
@@ -126,10 +119,10 @@ class Program
                     }
                     else if (processamento.IsCompleted)
                     {
-                        isProcessing = false; // Sai do loop
+                        isProcessing = false;
                     }
+                    Console.Clear();
                 }
-
                 break;
 
             case 6:

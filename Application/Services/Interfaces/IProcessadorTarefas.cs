@@ -4,11 +4,12 @@ namespace Application.Services.Interfaces
 {
     internal interface IProcessadorTarefas
     {
-        Task ImprimirTarefas();
         Task ProcessarTarefas();
         Task IniciarTarefa(Tarefa tarefa);
-        Task ImprimirTarefa(Tarefa tarefa);
-        Task CancelarTarefa(int id);
+        Task ImprimirTarefas();
+        void ImprimirTarefa(Tarefa tarefa);
+        Task CancelarTarefasEmExecucao();
         Task Encerrar();
+        Task AgendarTarefas();
     }
 }

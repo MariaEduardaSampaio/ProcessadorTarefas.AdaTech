@@ -19,35 +19,33 @@ namespace Application.Services
             _repository = repository;
         }
 
-        public Task CancelarTarefa(int id)
-        {
-            var tarefaEmExecucao = _repository.GetById(id);
-            if (tarefaEmExecucao.Estado == EstadoTarefa.EmExecucao)
-            {
-                Console.WriteLine($"Tarefa {tarefaEmExecucao.Id} cancelada.");
-                tarefaEmExecucao.Estado = EstadoTarefa.Cancelada;
-                _repository.Update(tarefaEmExecucao);
-            }
-            else
-                Console.WriteLine("Esta tarefa não está em execução.");
-            return Task.CompletedTask;
-        }
-
-        public Task Encerrar()
+        public async Task CancelarTarefasEmExecucao()
         {
             var tarefasEmExecucao = _repository.GetByStatus(EstadoTarefa.EmExecucao);
 
-            foreach (var item in tarefasEmExecucao)
+            foreach (var tarefa in tarefasEmExecucao.ToList())
+            {
+                tarefa.Estado = EstadoTarefa.Cancelada;
+                _repository.Update(tarefa);
+            }
+            return;
+        }
+
+        public async Task Encerrar()
+        {
+            var tarefasEmExecucao = _repository.GetByStatus(EstadoTarefa.EmExecucao);
+
+            foreach (var item in tarefasEmExecucao.ToList())
             {
                 Console.WriteLine($"Tarefa {item.Id} em pausa.");
                 item.Estado = EstadoTarefa.EmPausa;
                 _repository.Update(item);
             }
 
-            return Task.CompletedTask;
+            return;
         }
 
-        public void AgendarTarefas()
+        public Task AgendarTarefas()
         {
             var tarefas = _repository.GetAll().ToList();
             int quantidadeTarefasAgendadas = _repository.GetByStatus(EstadoTarefa.Agendada).Count();
@@ -65,6 +63,7 @@ namespace Application.Services
                     ImprimirTarefa(tarefa);
                 }
             }
+            return Task.CompletedTask;
         }
 
         public async Task ProcessarTarefas()
@@ -84,42 +83,70 @@ namespace Application.Services
                 while (tasksEmExecucao.Count < _tarefasExecutadasEmParalelo && tarefasParaProcessar.Count > 0)
                 {
                     Tarefa tarefa = tarefasParaProcessar.Dequeue();
-                    tasksEmExecucao.Add(IniciarTarefa(tarefa));
+                    tasksEmExecucao.Add(IniciarTarefa(tarefa)); 
                 }
 
                 await Task.WhenAll(tasksEmExecucao);
             }
         }
+
         public string ImprimirProgresso(int porcentagem, int tamanhoBarra = 20)
         {
-            // Calcula o número de caracteres '|' completos e o número de espaços em branco restantes
             int completos = (int)Math.Floor((decimal)(porcentagem * tamanhoBarra) / 100);
             int restantes = tamanhoBarra - completos;
 
-            // Constrói a barra de progresso
-            StringBuilder barra = new StringBuilder("[");
-            barra.Append('=', completos); // Adiciona os '|' completos
-            barra.Append(' ', restantes); // Adiciona espaços em branco restantes
+            StringBuilder barra = new("[");
+            barra.Append('=', completos); 
+            barra.Append(' ', restantes);
             barra.Append(']');
 
-            // Formata a porcentagem para exibir na barra de progresso
-            string porcentagemFormatada = porcentagem.ToString().PadLeft(3) + "%";
+            string porcentagemFormatada = porcentagem.ToString().PadLeft(3);
 
-            // Retorna a barra de progresso formatada com a porcentagem
-            return $"{barra} {porcentagemFormatada}";
+            return $"{barra} {porcentagemFormatada}%";
         }
 
         public async Task ImprimirTarefas()
         {
-            var tarefasEmExecucao = _repository.GetByStatus(EstadoTarefa.EmExecucao);
-            var tarefasEmPausa = _repository.GetByStatus(EstadoTarefa.EmPausa);
-            var tarefas = tarefasEmExecucao.Concat(tarefasEmPausa);
+            Console.Clear();
+            var tarefas = _repository.GetAll();
 
             foreach (var tarefa in tarefas)
-                await ImprimirTarefa(tarefa);
+                ImprimirTarefa(tarefa);
+            
+            await Task.Delay(1000);
         }
 
-        public async Task ImprimirTarefa(Tarefa tarefa)
+        public ConsoleColor DefinirCorTarefa(EstadoTarefa estado)
+        {
+            ConsoleColor corEstado;
+            switch (estado)
+            {
+                case EstadoTarefa.Criada:
+                    corEstado = ConsoleColor.Blue;
+                    break;
+                case EstadoTarefa.EmExecucao:
+                    corEstado = ConsoleColor.Yellow;
+                    break;
+                case EstadoTarefa.Concluida:
+                    corEstado = ConsoleColor.Green;
+                    break;
+                case EstadoTarefa.Cancelada:
+                    corEstado = ConsoleColor.Red;
+                    break;
+                case EstadoTarefa.EmPausa:
+                    corEstado = ConsoleColor.Magenta;
+                    break;
+                case EstadoTarefa.Agendada:
+                    corEstado = ConsoleColor.Cyan;
+                    break;
+                default:
+                    corEstado = ConsoleColor.White;
+                    break;
+            }
+
+            return corEstado;
+        }
+        public void ImprimirTarefa(Tarefa tarefa)
         {
             int progresso = 0;
 
@@ -127,15 +154,13 @@ namespace Application.Services
             int totalSubtarefas = tarefa.SubtarefasPendentes!.Count() + tarefa.SubtarefasExecutadas!.Count();
 
             if (totalSubtarefas != 0)
-            {
                 progresso = (int)((totalSubtarefasExecutadas / (double)totalSubtarefas) * 100);
-            }
 
-            Console.WriteLine($"\n_____________________________________________________________________________");
-            Console.WriteLine($"Tarefa {tarefa.Id}\t - Estado: {tarefa.Estado}");
-            Console.WriteLine($"Iniciada em: {tarefa.IniciadaEm}\t - Encerrada em: {tarefa.EncerradaEm}");
-            Console.WriteLine($"Progresso: {ImprimirProgresso(progresso)}%");
-            Console.WriteLine($"_____________________________________________________________________________\n");
+            Console.ForegroundColor = DefinirCorTarefa(tarefa.Estado);
+
+            Console.Write($"\nTarefa {tarefa.Id}\t - Estado: {tarefa.Estado}\t - Iniciada em: {tarefa.IniciadaEm}\t - Encerrada em: {tarefa.EncerradaEm}");
+            Console.Write($"\tProgresso: {ImprimirProgresso(progresso)} ({totalSubtarefasExecutadas}/{totalSubtarefas})\n");
+            Console.ResetColor();
         }
 
         public async Task IniciarSubtarefa(Subtarefa subtarefa)
@@ -149,7 +174,7 @@ namespace Application.Services
             tarefa.IniciadaEm = DateTime.Now;
 
             _repository.Update(tarefa);
-            ImprimirTarefa(tarefa);
+            //ImprimirTarefa(tarefa);
 
             int contadorSubtarefas = 0;
             var duracaoExecucaoTarefa = new Stopwatch();
@@ -183,8 +208,8 @@ namespace Application.Services
             tarefa.EncerradaEm = DateTime.Now;
 
             _repository.Update(tarefa);
-            ImprimirTarefa(tarefa);
-            await Task.Delay(200);
+            //ImprimirTarefa(tarefa);
+            //await Task.Delay(200);
         }
     }
 }
