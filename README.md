@@ -1,0 +1,1 @@
+# ProcessadorTarefas.AdaTech
